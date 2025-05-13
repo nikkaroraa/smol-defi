@@ -1,19 +1,39 @@
-## Foundry
+# smol-defi
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+A collection of minimal, production-influenced DeFi smart contracts — designed for learning, experimentation, and mastery.
 
-Foundry consists of:
+This repository implements foundational concepts from decentralized finance, focusing on clarity over complexity. Each module captures the essence of a DeFi primitive or protocol mechanism in a compact, self-contained way — perfect for engineers exploring smart contract internals or building intuition from first principles.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## 📦 Modules Included
 
-## Documentation
+- **Restaking** – Shared security mechanism inspired by EigenLayer (Currently Implemented)
+- Perpetuals – Leveraged trading logic and funding rate math
+- Options – European and American-style options settlement
+- AMMs – Constant product market makers and variants
+- Liquid Staking – Derivatives like stETH / rETH
+- Stablecoins – Overcollateralized and algorithmic models
+- Flash Loans – Uncollateralized borrowing within one transaction
+- Vaults – Yield optimization and strategy execution
+- Governance – Token voting and proposal lifecycle
+- Interest Rate Models – Compound-style utilization-based rates
 
-https://book.getfoundry.sh/
+## 🧰 Why Use smol-defi?
 
-## Usage
+- 🔍 **Minimal**: No unnecessary boilerplate. Focuses only on what matters.
+- 🧠 **Educational**: Designed to help you grok DeFi from the ground up.
+- 💡 **Extensible**: Use as a base for hackathons, prototypes, or deeper dives.
+- 🧪 **Well-Commented**: Every contract comes with inline explanations and events.
+
+## 📚 Ideal For
+
+- Smart contract developers
+- DeFi curious engineers
+- Protocol designers
+- Audit learners
+
+## Development
+
+This project uses [Foundry](https://book.getfoundry.sh/) for development, testing, and deployment.
 
 ### Build
 
