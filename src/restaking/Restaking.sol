@@ -80,6 +80,7 @@ contract Restaking {
     error NothingToSlash();
     error InvalidProtocol();
     error CooldownNotStarted();
+    error FullySlashed();
 
     /// @notice modifier to restrict function access to owner only
     modifier onlyOwner() {
@@ -99,6 +100,7 @@ contract Restaking {
     /**
      * @notice allows users to stake ETH
      * @dev emits Staked event on successful stake
+     * @dev reverts if amount is zero
      */
     function stake() external payable {
         if (msg.value == 0) revert ZeroAmount();
@@ -110,6 +112,7 @@ contract Restaking {
      * @notice allows users to restake their ETH to secure another protocol
      * @param targetProtocol address of the protocol to restake to
      * @dev emits Restaked event on successful restake
+     * @dev reverts if protocol address is zero or user has no staked balance
      */
     function restake(address targetProtocol) external {
         if (targetProtocol == address(0)) revert InvalidProtocol();
@@ -127,25 +130,18 @@ contract Restaking {
      * @notice allows users to initiate unstaking from a protocol
      * @param targetProtocol address of the protocol to unstake from
      * @dev emits UnstakeInitiated event and starts cooldown period
+     * @dev reverts if user has no restaked balance or another cooldown is in progress
      */
     function unstake(address targetProtocol) external {
         uint256 unstakeAmount = restakedBalances[msg.sender][targetProtocol];
         if (unstakeAmount == 0) revert ZeroBalance();
         if (cooldownStatuses[msg.sender].cooldownStart != 0) revert AnotherCooldownInProgress();
 
-        // remove protocol from user's restaked protocols
-        address[] storage protocols = restakedProtocols[msg.sender];
-        for (uint256 i = 0; i < protocols.length; i++) {
-            if (protocols[i] == targetProtocol) {
-                protocols[i] = protocols[protocols.length - 1];
-                protocols.pop();
-                break;
-            }
-        }
-
         stakedBalances[msg.sender] += unstakeAmount;
         cooldownStatuses[msg.sender] = CooldownStatus({cooldownStart: block.timestamp, amount: unstakeAmount});
-        restakedBalances[msg.sender][targetProtocol] = 0;
+
+        // remove protocol from user's restaked protocols
+        _removeProtocolIfEmpty(msg.sender, targetProtocol);
 
         emit UnstakeInitiated(msg.sender, targetProtocol, unstakeAmount);
     }
@@ -153,6 +149,8 @@ contract Restaking {
     /**
      * @notice allows users to withdraw their ETH after cooldown period
      * @dev emits Withdrawn event on successful withdrawal
+     * @dev reverts if cooldown hasn't started, isn't over, or user has no balance
+     * @dev applies any slashing penalties before withdrawal
      */
     function withdraw() external {
         CooldownStatus storage status = cooldownStatuses[msg.sender];
@@ -161,37 +159,65 @@ contract Restaking {
         if (stakedBalances[msg.sender] == 0) revert ZeroBalance();
 
         uint256 withdrawAmount = stakedBalances[msg.sender];
+        uint256 penalty = slashedBalances[msg.sender];
+        if (withdrawAmount <= penalty) revert FullySlashed();
+
+        uint256 finalAmount = withdrawAmount - penalty;
         stakedBalances[msg.sender] = 0;
+        slashedBalances[msg.sender] = 0; // reset after withdrawal
         delete cooldownStatuses[msg.sender];
 
-        (bool success,) = msg.sender.call{value: withdrawAmount}("");
+        (bool success,) = msg.sender.call{value: finalAmount}("");
         if (!success) revert WithdrawFailed();
 
-        emit Withdrawn(msg.sender, withdrawAmount);
+        emit Withdrawn(msg.sender, finalAmount);
     }
 
     /**
      * @notice allows owner to slash a user's restaked ETH for misbehavior
      * @param user address of the user to slash
+     * @param targetProtocol address of the protocol to slash
      * @param amount amount of ETH to slash
      * @dev only callable by owner, emits Slashed event
+     * @dev reverts if user has no restaked balance in the protocol
+     * @dev caps slash amount to what's actually restaked
      */
-    function slash(address user, uint256 amount) external onlyOwner {
-        if (restakedProtocols[user].length == 0 && stakedBalances[user] == 0) revert NothingToSlash();
+    function slash(address user, address targetProtocol, uint256 amount) external onlyOwner {
+        uint256 currentRestaked = restakedBalances[user][targetProtocol];
+        if (currentRestaked == 0) revert NothingToSlash();
 
-        // find maximum amount restaked in any protocol
-        uint256 maxRestakedAmount = 0;
-        for (uint256 i = 0; i < restakedProtocols[user].length; i++) {
-            uint256 currentRestakedAmount = restakedBalances[user][restakedProtocols[user][i]];
-            if (currentRestakedAmount > maxRestakedAmount) {
-                maxRestakedAmount = currentRestakedAmount;
-            }
+        // cap slash amount to what's actually restaked
+        if (amount > currentRestaked) {
+            amount = currentRestaked;
         }
 
-        // cap slash amount to maximum restaked amount
-        amount = amount > maxRestakedAmount ? maxRestakedAmount : amount;
+        restakedBalances[user][targetProtocol] -= amount;
         slashedBalances[user] += amount;
 
+        // remove protocol from restakedProtocols if balance is now zero
+        _removeProtocolIfEmpty(user, targetProtocol);
+
         emit Slashed(user, amount);
+    }
+
+    /**
+     * @notice internal function to remove a protocol from user's restaked protocols if balance is zero
+     * @param user address of the user
+     * @param protocol address of the protocol to check
+     * @dev removes protocol from array and deletes mapping entry if balance is zero
+     */
+    function _removeProtocolIfEmpty(address user, address protocol) internal {
+        if (restakedBalances[user][protocol] > 0) return;
+
+        delete restakedBalances[user][protocol]; // free up storage
+
+        address[] storage protocols = restakedProtocols[user];
+        for (uint256 i = 0; i < protocols.length; i++) {
+            if (protocols[i] == protocol) {
+                protocols[i] = protocols[protocols.length - 1];
+                protocols.pop();
+                break;
+            }
+        }
     }
 }
