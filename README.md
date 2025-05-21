@@ -7,6 +7,7 @@ This repository implements foundational concepts from decentralized finance, foc
 ## 📦 Modules Included
 
 - **Restaking** – Shared security mechanism inspired by EigenLayer (Currently Implemented)
+- **Lending Pool** – Simple lending protocol with deposits, borrows, and liquidations (Currently Implemented)
 - Perpetuals – Leveraged trading logic and funding rate math
 - Options – European and American-style options settlement
 - AMMs – Constant product market makers and variants
