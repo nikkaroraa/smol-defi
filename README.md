@@ -8,12 +8,12 @@ This repository implements foundational concepts from decentralized finance, foc
 
 - **Restaking** – Shared security mechanism inspired by EigenLayer (Currently Implemented)
 - **Lending Pool** – Simple lending protocol with deposits, borrows, and liquidations (Currently Implemented)
+- **Flash Loans** – Uncollateralized borrowing within one transaction (Currently Implemented)
 - Perpetuals – Leveraged trading logic and funding rate math
 - Options – European and American-style options settlement
 - AMMs – Constant product market makers and variants
 - Liquid Staking – Derivatives like stETH / rETH
 - Stablecoins – Overcollateralized and algorithmic models
-- Flash Loans – Uncollateralized borrowing within one transaction
 - Vaults – Yield optimization and strategy execution
 - Governance – Token voting and proposal lifecycle
 - Interest Rate Models – Compound-style utilization-based rates
